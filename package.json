@@ -1,0 +1,13 @@
+{
+  "name": "@effector/swc-plugin",
+  "version": "0.1.0",
+  "main": "index.js",
+  "author": "Sergey Sova <mail@sergeysova.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@swc/cli": "^0.1.57",
+    "@swc/core": "^1.2.172",
+    "jest": "^28.0.1",
+    "prettier": "^2.6.2"
+  }
+}
