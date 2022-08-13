@@ -1,13 +1,27 @@
 {
   "name": "@effector/swc-plugin",
   "version": "0.1.0",
-  "main": "index.js",
+  "main": "target/wasm32-wasi/release/effector_swc_plugin.wasm",
+  "files": [
+    "target/wasm32-wasi/release/effector_swc_plugin.wasm"
+  ],
+  "scripts": {
+    "build:demo": "vite build",
+    "start": "vite"
+  },
   "author": "Sergey Sova <mail@sergeysova.com>",
   "license": "MIT",
   "devDependencies": {
-    "@swc/cli": "^0.1.57",
-    "@swc/core": "^1.2.172",
-    "jest": "^28.0.1",
-    "prettier": "^2.6.2"
+    "@babel/core": "~7.18.10",
+    "@effector/swc-plugin": "link:/Users/k.mironov/WebstormProjects/swc-plugin",
+    "@rollup/plugin-babel": "~5.3.1",
+    "@swc/cli": "~0.1.57",
+    "@swc/core": "~1.2.233",
+    "effector": "~22.3.0",
+    "rollup": "~2.78.0",
+    "rollup-plugin-swc3": "~0.3.0",
+    "unplugin-swc": "~1.3.2",
+    "vite": "~3.0.8",
+    "vite-plugin-babel": "~1.1.2"
   }
 }
