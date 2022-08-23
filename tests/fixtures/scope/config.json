@@ -1,0 +1,10 @@
+{
+  "bindings": {
+    "react": {
+      "scopeReplace": true
+    },
+    "solid": {
+      "scopeReplace": true
+    }
+  }
+}

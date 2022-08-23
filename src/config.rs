@@ -9,6 +9,21 @@ use serde::{
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct Binding {
+    pub scope_replace: bool,
+    #[serde(default)]
+    pub methods: AHashSet<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Bindings {
+    pub react: Option<Binding>,
+    pub solid: Option<Binding>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct PublicConfig {
     #[serde(default = "r#true")]
     pub add_names: bool,
@@ -26,6 +41,26 @@ pub struct PublicConfig {
     #[serde(default = "default_import_names")]
     #[serde(deserialize_with = "deserialize_import_names")]
     pub import_names: AHashSet<String>,
+    pub bindings: Option<Bindings>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DomainMethods {
+    pub(crate) store: AHashSet<String>,
+    pub(crate) event: AHashSet<String>,
+    pub(crate) effect: AHashSet<String>,
+    pub(crate) domain: AHashSet<String>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ReactMethods {
+    pub(crate) create_gate: AHashSet<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ImportViewNames {
+    pub scope: AHashSet<String>,
+    pub no_scope: AHashSet<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -57,8 +92,10 @@ pub struct InternalConfig {
     pub split_creators: AHashSet<String>,
     pub api_creators: AHashSet<String>,
     pub merge_creators: AHashSet<String>,
-    // pub(crate) domain_methods: Vec<String>,
-    // pub(crate) react_methods: Vec<String>,
+    pub import_react_names: ImportViewNames,
+    pub import_solid_names: ImportViewNames,
+    pub(crate) domain_methods: DomainMethods,
+    pub(crate) react_methods: ReactMethods,
 }
 
 #[derive(Debug, Clone)]
@@ -88,7 +125,14 @@ impl InternalConfig {
         let split_creators = AHashSet::from_iter(vec!["split".into()]);
         let api_creators = AHashSet::from_iter(vec!["createApi".into()]);
         let merge_creators = AHashSet::from_iter(vec!["merge".into()]);
-        // let domain_methods = todo!();
+        let domain_methods = DomainMethods {
+            store: AHashSet::from_iter(["store".into(), "createStore".into()]),
+            event: AHashSet::from_iter(["event".into(), "createEvent".into()]),
+            effect: AHashSet::from_iter(["effect".into(), "createEffect".into()]),
+            domain: AHashSet::from_iter(["domain".into(), "createDomain".into()]),
+        };
+        let react_methods =
+            ReactMethods { create_gate: AHashSet::from_iter(["createGate".into()]) };
 
         Self {
             stores: true,
@@ -118,6 +162,22 @@ impl InternalConfig {
             split_creators,
             api_creators,
             merge_creators,
+            domain_methods,
+            react_methods,
+            import_react_names: ImportViewNames {
+                scope: AHashSet::from_iter([
+                    "effector-react/scope".into(),
+                    "effector-react/ssr".into(),
+                ]),
+                no_scope: AHashSet::from_iter([
+                    "effector-react".into(),
+                    "effector-react/compat".into(),
+                ]),
+            },
+            import_solid_names: ImportViewNames {
+                scope: AHashSet::from_iter(["effector-solid/scope".into()]),
+                no_scope: AHashSet::from_iter(["effector-solid".into()]),
+            },
         }
     }
 }

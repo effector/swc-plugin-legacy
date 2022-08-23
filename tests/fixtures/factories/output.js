@@ -5,15 +5,16 @@ var _effectorFileName$0 = "/output.js";
 const x = _withFactory$0({
     sid: "18fxhw2x172ly",
     fn: ()=>createFactory(createEvent({
-        sid: "1uuj6tdvhexhb",
+        sid: "104pf2as7ai2y",
         loc: {
             file: _effectorFileName$0,
             line: 4,
             column: 24
         },
-        name: "inline_unit"
+        name: "fn"
     })),
     name: "x",
+    method: "default",
     loc: {
         file: _effectorFileName$0,
         line: 4,

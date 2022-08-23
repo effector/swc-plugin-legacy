@@ -32,7 +32,7 @@ macro_rules! enclose {
     };
 }
 
-type MethodParserFun = Box<dyn Fn(&State, &str, &Option<&str>)>;
+type MethodParserFun = Box<dyn Fn(&State, &Option<&str>)>;
 
 struct MethodParser {
     flag: bool,
@@ -41,7 +41,7 @@ struct MethodParser {
 }
 
 impl MethodParser {
-    pub fn new<F: Fn(&State, &str, &Option<&str>) + 'static>(
+    pub fn new<F: Fn(&State, &Option<&str>) + 'static>(
         flag: bool,
         set: AHashSet<String>,
         fun: F,
@@ -119,18 +119,128 @@ fn make_trace(
 }
 
 fn set_restore_name_after<'a>(
-    _state: &State<'a>,
-    _name_node_id: &Option<&str>,
-    _small_config: &SmallConfig,
-    _check_binding_name: &str,
+    state: &State<'a>,
+    name_node_id: &Option<&str>,
+    small_config: &SmallConfig,
 ) {
+    let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
+
+    let stable_id = generate_stable_id(
+        state.root.unwrap_or(""),
+        state.filename.unwrap_or(""),
+        name_node_id,
+        state.loc.as_ref().unwrap().line as u32,
+        state.loc.as_ref().unwrap().col_display as u32,
+        debug_sids,
+    );
+
+    let mut args = state.args.borrow_mut();
+
+    let (first_arg, second_arg, old_config) = (args.get(0), args.get(1), args.get(2));
+
+    if first_arg.is_none() || second_arg.is_none() {
+        return;
+    }
+
+    let mut config_expr = obj_lit!({ "sid": stable_id });
+
+    if let Some(old_config) = old_config {
+        config_expr.props.push(property("and", *old_config.expr.clone()));
+    }
+
+    if add_loc {
+        let loc = state.loc.as_ref();
+        let line = loc.map(|l| l.line);
+        let column = loc.map(|l| l.col_display);
+        let loc_prop = property(
+            "loc",
+            make_trace(&state.file_name_identifier, line, column, &state.uid_generator),
+        );
+
+        config_expr.props.push(loc_prop);
+    }
+
+    if let Some(display_name) = name_node_id {
+        if add_names {
+            config_expr.props.push(property("name", Expr::from(*display_name)))
+        }
+    }
+
+    let arg = ExprOrSpread::from(Expr::Object(config_expr));
+
+    if old_config.is_some() {
+        args[2] = arg;
+    } else {
+        args.push(arg);
+    }
+}
+
+fn set_config_for_conf_method<'a>(
+    state: &State<'a>,
+    name_node_id: &Option<&str>,
+    small_config: &SmallConfig,
+    single_arg: bool,
+    allow_empty_args: bool,
+) {
+    let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
+
+    let stable_id = generate_stable_id(
+        state.root.unwrap_or(""),
+        state.filename.unwrap_or(""),
+        name_node_id,
+        state.loc.as_ref().unwrap().line as u32,
+        state.loc.as_ref().unwrap().col_display as u32,
+        debug_sids,
+    );
+
+    let mut args = state.args.borrow_mut();
+
+    if args.get(0).is_none() && !allow_empty_args {
+        return;
+    }
+
+    let common_args = if single_arg {
+        args.remove(0)
+    } else {
+        ExprOrSpread::from(Expr::Array(ArrayLit {
+            span: DUMMY_SP,
+            elems: args.drain(..).map(Some).collect(),
+        }))
+    };
+
+    let mut config_expr = obj_lit!({ "sid": stable_id });
+
+    if add_loc {
+        let loc = state.loc.as_ref();
+        let line = loc.map(|l| l.line);
+        let column = loc.map(|l| l.col_display);
+        let loc_prop = property(
+            "loc",
+            make_trace(&state.file_name_identifier, line, column, &state.uid_generator),
+        );
+
+        config_expr.props.push(loc_prop);
+    }
+
+    if let Some(display_name) = name_node_id {
+        if add_names {
+            config_expr.props.push(property("name", Expr::from(*display_name)))
+        }
+    }
+
+    let arg = ExprOrSpread::from(swc_core::quote!(
+        "{and: $common, or: $config}" as Expr,
+        common: Expr = *common_args.expr,
+        config: Expr = config_expr.into()
+    ));
+
+    args.insert(0, arg);
 }
 
 fn set_event_name_after<'a>(
     state: &State<'a>,
     name_node_id: &Option<&str>,
     small_config: &SmallConfig,
-    _check_binding_name: &str,
 ) {
     let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
 
@@ -200,7 +310,6 @@ fn set_store_name_after<'a>(
     name_node_id: &Option<&str>,
     small_config: &SmallConfig,
     _fill_first_arg: bool,
-    _check_binding_name: &str,
 ) {
     let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
 
@@ -260,12 +369,11 @@ fn apply_method_parsers(
         let MethodParser { fun, flag, set } = method_parser;
 
         if *flag && set.contains(resolved) {
-            dbg!(state.is_local_ident(local));
             if state.is_local_ident(local) {
                 return;
             }
 
-            fun(state, local, &if let Some(id) = id { Some(id) } else { Some("inline_unit") })
+            fun(state, &if let Some(id) = id { Some(id) } else { Some("inline_unit") })
         }
     }
 }
@@ -281,7 +389,7 @@ pub struct State<'a> {
     decls_visited: AHashSet<Decl>,
     method_parsers: MethodParsers,
     domain_method_parsers: MethodParsers,
-    react_methods_parsers: MethodParsers,
+    react_method_parsers: MethodParsers,
     uid_generator: UidGenerator,
 }
 
@@ -304,79 +412,160 @@ impl<'a> State<'a> {
             MethodParser::new(
                 config.internal.stores,
                 config.internal.store_creators,
-                enclose! { (public_rc) move |state, name: &str, id| {
+                enclose! { (public_rc) move |state, id| {
                     set_store_name_after(
-                        state, id, &SmallConfig::from(public_rc.as_ref()), false, name
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false
                     )
                 }},
             ),
             MethodParser::new(
                 config.internal.events,
                 config.internal.event_creators,
-                enclose! { (public_rc) move |state, name, id| {
-                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()), name)
+                enclose! { (public_rc) move |state, id| {
+                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()))
                 }},
             ),
             MethodParser::new(
                 config.internal.effects,
                 config.internal.effect_creators,
-                enclose! { (public_rc) move |state, name, id| {
-                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()), name)
+                enclose! { (public_rc) move |state, id| {
+                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()))
                 }},
             ),
             MethodParser::new(
                 config.internal.domains,
                 config.internal.domain_creators,
-                enclose! { (public_rc) move |state, name, id| {
-                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()), name)
+                enclose! { (public_rc) move |state, id| {
+                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()))
                 }},
             ),
             MethodParser::new(
                 config.internal.restores,
                 config.internal.restore_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc) move |state, id| {
+                    set_restore_name_after(state, id, &SmallConfig::from(public_rc.as_ref()))
+                }},
             ),
             MethodParser::new(
                 config.internal.combines,
                 config.internal.combine_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc ) move |state, id| {
+                    set_config_for_conf_method(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false, false
+                    )
+                }},
             ),
             MethodParser::new(
                 config.internal.samples,
                 config.internal.sample_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc ) move |state, id| {
+                    set_config_for_conf_method(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false, false
+                    )
+                }},
             ),
             MethodParser::new(
                 config.internal.forwards,
                 config.internal.forward_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc ) move |state, id| {
+                    set_config_for_conf_method(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), true, false
+                    )
+                }},
             ),
             MethodParser::new(
                 config.internal.guards,
                 config.internal.guard_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc ) move |state, id| {
+                    set_config_for_conf_method(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false, false
+                    )
+                }},
             ),
             MethodParser::new(
                 config.internal.attaches,
                 config.internal.attach_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc ) move |state, id| {
+                    set_config_for_conf_method(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), true, false
+                    )
+                }},
             ),
             MethodParser::new(
                 config.internal.splits,
                 config.internal.split_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc ) move |state, id| {
+                    set_config_for_conf_method(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false, false
+                    )
+                }},
             ),
             MethodParser::new(
                 config.internal.apis,
                 config.internal.api_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc ) move |state, id| {
+                    set_config_for_conf_method(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false, false
+                    )
+                }},
             ),
             MethodParser::new(
                 config.internal.merges,
                 config.internal.merge_creators,
-                move |_state, _name, _id| {},
+                enclose! { (public_rc) move |state, id| {
+                    set_store_name_after(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false
+                    )
+                }},
             ),
         ];
+
+        let domain_method_parsers = vec![
+            MethodParser::new(
+                config.internal.stores,
+                config.internal.domain_methods.store,
+                enclose! { (public_rc) move |state, id| {
+                    set_store_name_after(
+                        state, id, &SmallConfig::from(public_rc.as_ref()), false
+                    )
+                }},
+            ),
+            MethodParser::new(
+                config.internal.events,
+                config.internal.domain_methods.event,
+                enclose! { (public_rc) move |state, id| {
+                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()))
+                }},
+            ),
+            MethodParser::new(
+                config.internal.effects,
+                config.internal.domain_methods.effect,
+                enclose! { (public_rc) move |state, id| {
+                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()))
+                }},
+            ),
+            MethodParser::new(
+                config.internal.domains,
+                config.internal.domain_methods.domain,
+                enclose! { (public_rc) move |state, id| {
+                    set_event_name_after(state, id, &SmallConfig::from(public_rc.as_ref()))
+                }},
+            ),
+        ];
+
+        let react_method_parsers = vec![MethodParser::new(
+            config.internal.gates,
+            config.internal.react_methods.create_gate,
+            enclose! { (public_rc) move |state, id| {
+                set_config_for_conf_method(
+                    state,
+                    id,
+                    &SmallConfig::from(public_rc.as_ref()),
+                    false,
+                    true
+                )
+            }},
+        )];
 
         Self {
             file_name_identifier: None,
@@ -387,8 +576,8 @@ impl<'a> State<'a> {
             loc: None,
             args: RefCell::new(vec![]),
             resolved_methods: AHashMap::new(),
-            domain_method_parsers: vec![],
-            react_methods_parsers: vec![],
+            domain_method_parsers,
+            react_method_parsers,
             uid_generator: UidGenerator::default(),
         }
     }
@@ -492,6 +681,12 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
         d.visit_mut_children_with(self);
     }
 
+    fn visit_mut_member_prop(&mut self, p: &mut MemberProp) {
+        self.candidate_name = if let MemberProp::Ident(id) = p { Some(id.clone()) } else { None };
+
+        p.visit_mut_children_with(self);
+    }
+
     fn visit_mut_module(&mut self, m: &mut Module) {
         let filename = self.add_file_name_identifier();
 
@@ -541,6 +736,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
     }
 
     fn visit_mut_import_decl(&mut self, d: &mut ImportDecl) {
+        let source = &d.src.value.to_string();
         let factories_used = !self.config.public.factories.is_empty();
         let has_relative_factories = self
             .config
@@ -580,6 +776,34 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                         self.ignored_imports.insert(local.to_owned());
                     }
                 }
+            }
+        }
+
+        if let Some(bindings) = &self.config.public.bindings {
+            let mut check_and_replace =
+                |replace: bool, no_scope: &AHashSet<String>, scope: &AHashSet<String>| {
+                    if replace && no_scope.contains(source) {
+                        d.src =
+                            scope.iter().find(|s| s.contains("scope")).unwrap().to_string().into()
+                    }
+                };
+
+            if let Some(react) = &bindings.react {
+                let import_react_names = &self.config.internal.import_react_names;
+                check_and_replace(
+                    react.scope_replace,
+                    &import_react_names.no_scope,
+                    &import_react_names.scope,
+                );
+            }
+
+            if let Some(solid) = &bindings.solid {
+                let import_solid_names = &self.config.internal.import_solid_names;
+                check_and_replace(
+                    solid.scope_replace,
+                    &import_solid_names.no_scope,
+                    &import_solid_names.scope,
+                );
             }
         }
 
@@ -669,7 +893,14 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
         d.visit_mut_children_with(self);
     }
 
-    // TODO: candidate names for {object_pat_prop}
+    fn visit_mut_key_value_prop(&mut self, p: &mut KeyValueProp) {
+        self.candidate_name = match &p.key {
+            PropName::Ident(id) => Some(id.clone()),
+            _ => None,
+        };
+
+        p.visit_mut_children_with(self);
+    }
 
     fn visit_mut_var_declarator(&mut self, d: &mut VarDeclarator) {
         let ident = match &d.name {
@@ -677,30 +908,23 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
             _ => None,
         };
 
-        if let Some(expr) = &mut d.init {
-            if let Expr::Call(call_expr) = &mut **expr {
-                self.candidate_name = ident;
-                call_expr.visit_mut_with(self);
-                self.candidate_name = None;
-            }
-        }
+        self.candidate_name = ident;
+        d.visit_mut_children_with(self);
     }
 
     fn visit_mut_assign_expr(&mut self, e: &mut AssignExpr) {
         let ident = match &e.left {
-            PatOrExpr::Pat(_) => None,
+            PatOrExpr::Pat(p) => match &**p {
+                Pat::Ident(i) => Some(i.id.clone()),
+                _ => None,
+            },
             PatOrExpr::Expr(e) => match &**e {
                 Expr::Ident(i) => Some(i.clone()),
                 _ => None,
             },
         };
 
-        if let Expr::Call(call_expr) = &mut *e.right {
-            self.candidate_name = ident;
-            call_expr.visit_mut_with(self);
-            self.candidate_name = None;
-        }
-
+        self.candidate_name = ident;
         e.visit_mut_children_with(self);
     }
 
@@ -708,16 +932,53 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
         let factories_used = !self.config.public.factories.is_empty();
 
         if let Callee::Expr(expr) = &mut e.callee {
-            if let Expr::Ident(ident) = &mut **expr {
-                let local = ident.sym.to_string();
+            match &mut **expr {
+                Expr::Member(member) => {
+                    if let MemberProp::Ident(ident) = &member.prop {
+                        let local = ident.sym.to_string();
 
-                if !self.ignored_imports.contains(&local) {
-                    let resolved = self
-                        .state
-                        .resolved_methods
-                        .iter()
-                        .find_map(|(k, locals)| locals.contains(&ident.to_id()).then_some(k));
-                    if let Some(resolved) = resolved {
+                        apply_method_parsers(
+                            &self.state.domain_method_parsers,
+                            &self.state,
+                            &local,
+                            &local,
+                            &self.candidate_name.as_ref().map(|i| i.as_ref()),
+                        );
+                    }
+                }
+                Expr::Ident(ident) => {
+                    let local = ident.sym.to_string();
+
+                    if !self.ignored_imports.contains(&local) {
+                        let resolved =
+                            self.state.resolved_methods.iter().find_map(|(k, locals)| {
+                                locals.contains(&ident.to_id()).then_some(k)
+                            });
+                        if let Some(resolved) = resolved {
+                            let loc = self.cm.lookup_char_pos(ident.span.lo);
+
+                            self.state.loc = Some(loc);
+                            self.state.args = RefCell::new(e.args.clone().drain(..).collect());
+                            apply_method_parsers(
+                                &self.state.method_parsers,
+                                &self.state,
+                                &local,
+                                resolved.0.as_ref(),
+                                &self.candidate_name.as_ref().map(|i| i.as_ref()),
+                            );
+                            apply_method_parsers(
+                                &self.state.react_method_parsers,
+                                &self.state,
+                                &local,
+                                resolved.0.as_ref(),
+                                &self.candidate_name.as_ref().map(|i| i.as_ref()),
+                            );
+                        }
+                    } else {
+                        return;
+                    }
+
+                    if self.state.resolved_methods.is_empty() {
                         let loc = self.cm.lookup_char_pos(ident.span.lo);
 
                         self.state.loc = Some(loc);
@@ -726,103 +987,95 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                             &self.state.method_parsers,
                             &self.state,
                             &local,
-                            resolved.0.as_ref(),
+                            &local,
+                            &self.candidate_name.as_ref().map(|i| i.as_ref()),
+                        );
+                        apply_method_parsers(
+                            &self.state.react_method_parsers,
+                            &self.state,
+                            &local,
+                            &local,
                             &self.candidate_name.as_ref().map(|i| i.as_ref()),
                         );
                     }
-                } else {
-                    return;
-                }
 
-                if self.state.resolved_methods.is_empty() {
-                    let loc = self.cm.lookup_char_pos(ident.span.lo);
+                    if factories_used
+                        && !self.is_factory.contains(&ident.to_id())
+                        && self.factory_map.contains_key(&ident.to_id())
+                    {
+                        let loc = self.cm.lookup_char_pos(ident.span.lo);
 
-                    self.state.loc = Some(loc);
-                    self.state.args = RefCell::new(e.args.clone().drain(..).collect());
-                    apply_method_parsers(
-                        &self.state.method_parsers,
-                        &self.state,
-                        &local,
-                        &local,
-                        &self.candidate_name.as_ref().map(|i| i.as_ref()),
-                    );
-                }
+                        self.state.loc = Some(loc.clone());
+                        self.state.args = RefCell::new(e.args.clone().drain(..).collect());
+                        if !self.factory_import_added {
+                            self.factory_import_added = true;
+                            self.with_factory_name =
+                                Some(self.add_import(quote_ident!("withFactory")));
+                        }
 
-                if factories_used
-                    && !self.is_factory.contains(&ident.to_id())
-                    && self.factory_map.contains_key(&ident.to_id())
-                {
-                    let loc = self.cm.lookup_char_pos(ident.span.lo);
+                        let FactoryInfo { source: _, imported_name, local_name: _ } = self
+                            .factory_map
+                            .remove(&ident.to_id())
+                            .expect("Already checked for existence.");
+                        self.is_factory.insert(ident.to_id());
 
-                    self.state.loc = Some(loc.clone());
-                    self.state.args = RefCell::new(e.args.clone().drain(..).collect());
-                    if !self.factory_import_added {
-                        self.factory_import_added = true;
-                        self.with_factory_name = Some(self.add_import(quote_ident!("withFactory")));
-                    }
+                        let sid = generate_stable_id(
+                            self.state.root.unwrap_or(""),
+                            self.state.filename.unwrap_or(""),
+                            &self.candidate_name.as_ref().map(|i| i.as_ref()),
+                            loc.line as u32,
+                            loc.col_display as u32,
+                            self.config.public.debug_sids,
+                        );
 
-                    let FactoryInfo { source: _, imported_name: _, local_name: _ } = self
-                        .factory_map
-                        .get(&ident.to_id())
-                        .expect("Already checked for existence.");
-                    self.is_factory.insert(ident.to_id());
+                        let expr = swc_core::quote!(
+                            "$factory({sid: $sid,fn:()=>$fun})" as Expr,
+                            factory = self.with_factory_name.clone().unwrap(),
+                            sid: Expr = sid.into(),
+                            fun: Expr = Expr::Call(e.clone()),
+                        );
 
-                    let sid = generate_stable_id(
-                        self.state.root.unwrap_or(""),
-                        self.state.filename.unwrap_or(""),
-                        &self.candidate_name.as_ref().map(|i| i.as_ref()),
-                        loc.line as u32,
-                        loc.col_display as u32,
-                        self.config.public.debug_sids,
-                    );
+                        if let Expr::Call(mut call) = expr {
+                            if let Some(arg) = call.args.get_mut(0) {
+                                if let Expr::Object(obj) = &mut *arg.expr {
+                                    if self.config.public.add_loc || self.config.public.add_names {
+                                        let name_prop = property(
+                                            "name",
+                                            Expr::from(
+                                                self.candidate_name
+                                                    .clone()
+                                                    .map(|n| n.sym)
+                                                    .unwrap_or_else(|| "inline_unit".into()),
+                                            ),
+                                        );
+                                        let method_prop =
+                                            property("method", Expr::from(imported_name));
+                                        obj.props.extend([name_prop, method_prop]);
+                                    }
 
-                    let expr = swc_core::quote!(
-                        "$factory({sid: $sid,fn:()=>$fun})" as Expr,
-                        factory = self.with_factory_name.clone().unwrap(),
-                        sid: Expr = sid.into(),
-                        fun: Expr = Expr::Call(e.clone()),
-                    );
-
-                    if let Expr::Call(mut call) = expr {
-                        if let Some(arg) = call.args.get_mut(0) {
-                            if let Expr::Object(obj) = &mut *arg.expr {
-                                if self.config.public.add_loc || self.config.public.add_names {
-                                    let name_prop = property(
-                                        "name",
-                                        Expr::from(
-                                            self.candidate_name
-                                                .clone()
-                                                .map(|n| n.sym)
-                                                .unwrap_or_else(|| "inline_unit".into()),
-                                        ),
-                                    );
-                                    obj.props.push(name_prop);
-                                }
-
-                                if self.config.public.add_loc {
-                                    let loc_prop = property(
-                                        "loc",
-                                        make_trace(
-                                            &self.state.file_name_identifier,
-                                            Some(loc.line),
-                                            Some(loc.col_display),
-                                            &self.state.uid_generator,
-                                        ),
-                                    );
-                                    obj.props.push(loc_prop);
+                                    if self.config.public.add_loc {
+                                        let loc_prop = property(
+                                            "loc",
+                                            make_trace(
+                                                &self.state.file_name_identifier,
+                                                Some(loc.line),
+                                                Some(loc.col_display),
+                                                &self.state.uid_generator,
+                                            ),
+                                        );
+                                        obj.props.push(loc_prop);
+                                    }
                                 }
                             }
+                            *e = call;
+                            e.visit_mut_children_with(self);
+                            return;
                         }
-                        *e = call;
-                        e.visit_mut_children_with(self);
-                        return;
                     }
                 }
+                _ => (),
             }
         }
-
-        let candidate_name = self.candidate_name.take();
-        let loc = self.state.loc.take();
 
         let mut args = self.state.args.borrow_mut();
         if !args.is_empty() {
@@ -832,8 +1085,5 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
         drop(args);
 
         e.visit_mut_children_with(self);
-
-        self.candidate_name = candidate_name;
-        self.state.loc = loc;
     }
 }
