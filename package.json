@@ -1,6 +1,6 @@
 {
   "name": "@effector/swc-plugin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "target/wasm32-wasi/release/effector_swc_plugin.wasm",
   "files": [
     "target/wasm32-wasi/release/effector_swc_plugin.wasm"
