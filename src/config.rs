@@ -10,6 +10,7 @@ use serde::{
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Binding {
+    #[serde(default)]
     pub scope_replace: bool,
     #[serde(default)]
     pub methods: AHashSet<String>,
