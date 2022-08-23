@@ -1,0 +1,4 @@
+{
+  "factories": ["./factory.js"],
+  "addLoc": true
+}

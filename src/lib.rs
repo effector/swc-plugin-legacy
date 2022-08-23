@@ -1,31 +1,40 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::Arc;
+mod config;
+mod effector;
+mod macros;
+mod path;
+mod sid;
 
-use serde::Deserialize;
-use swc_atoms::JsWord;
-use swc_common::{chain, SourceFile};
-use swc_ecmascript::visit::{Fold, VisitMut};
+use swc_common::plugin::metadata::TransformPluginMetadataContextKind;
+use swc_core::{
+    ast::Program,
+    plugin::{plugin_transform, proxies::TransformPluginProgramMetadata},
+    visit::VisitMutWith,
+};
 
-mod analyzer;
+pub use crate::{
+    config::{Config, InternalConfig, PublicConfig},
+    effector::Effector,
+};
 
-#[derive(Debug, Default, Clone, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct Config {
-    #[serde(default = "effector_by_default")]
-    pub import_name: JsWord,
+#[plugin_transform]
+pub fn effector(mut program: Program, data: TransformPluginProgramMetadata) -> Program {
+    // TODO: Correct errors
+    let public_config = serde_json::from_str::<PublicConfig>(
+        &data.get_transform_plugin_config().expect("Failed to get plugin config"),
+    )
+    .expect("Invalid config!");
 
-    #[serde(default = "Vec::new")]
-    pub factories: Vec<JsWord>,
-}
+    let no_defaults = public_config.no_defaults;
 
-fn effector_by_default() -> JsWord {
-    "effector".into()
-}
+    let root = data.get_context(&TransformPluginMetadataContextKind::Cwd);
 
-pub fn effector(file: Arc<SourceFile>, config: Config) -> impl Fold + VisitMut {
-    let state: Rc<RefCell<analyzer::State>> = Default::default();
-    let config = Rc::new(config);
+    let filename = data.get_context(&TransformPluginMetadataContextKind::Filename);
 
-    analyzer::analyzer(config.clone(), state.clone())
+    let config = Config::new(public_config, InternalConfig::new(no_defaults));
+
+    let mut plugin = Effector::new(config, root.as_deref(), filename.as_deref(), data.source_map);
+
+    program.visit_mut_with(&mut plugin);
+
+    program
 }
