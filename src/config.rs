@@ -188,7 +188,19 @@ fn r#true() -> bool {
 }
 
 fn default_import_names() -> AHashSet<String> {
-    AHashSet::from(["effector".into(), "effector/compat".into()])
+    AHashSet::from([
+        "effector".into(),
+        "effector/compat".into(),
+        "effector-root".into(),
+        "effector-root/compat".into(),
+        "effector-logger".into(),
+        "trail/runtime".into(),
+        "@effector/effector".into(),
+        "@farfetched/core".into(),
+        "@effector/reflect".into(),
+        "@effector/reflect/ssr".into(),
+        "atomic-router".into()
+    ])
 }
 
 fn deserialize_import_names<'de, D>(deserializer: D) -> Result<AHashSet<String>, D::Error>
