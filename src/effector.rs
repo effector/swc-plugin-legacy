@@ -9,7 +9,7 @@ use std::{
 
 use ahash::{AHashMap, AHashSet};
 use swc_common::{sync::Lrc, Loc, SourceMapper, DUMMY_SP};
-use swc_core::{
+use swc_core::ecma::{
     ast::*,
     utils::{private_ident, quote_ident},
     visit::{noop_visit_mut_type, VisitMut, VisitMutWith},
@@ -634,7 +634,7 @@ impl<'a, C: SourceMapper> Effector<'a, C> {
         let local_ident = self.state.uid_generator.factory_generate_identifier(method.as_ref());
         let decl = ImportDecl {
             span: DUMMY_SP,
-            src: Str::from("effector"),
+            src: Box::new(Str::from("effector")),
             type_only: false,
             asserts: None,
             specifiers: vec![ImportSpecifier::Named(ImportNamedSpecifier {
@@ -696,7 +696,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                     .body
                     .iter()
                     .rposition(|m| matches!(m, ModuleItem::ModuleDecl(ModuleDecl::Import(_))));
-                let stmt = ModuleItem::Stmt(Stmt::Decl(Decl::Var(VarDecl {
+                let stmt = ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(VarDecl {
                     span: DUMMY_SP,
                     kind: VarDeclKind::Var,
                     declare: false,
@@ -706,7 +706,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                         init: Some(Box::new(Expr::from(filename.unwrap_or_else(|| "".into())))),
                         definite: false,
                     }],
-                })));
+                }))));
                 if let Some(index) = last_import_index {
                     m.body.insert(index + 1, stmt);
                 } else {
@@ -783,8 +783,9 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
             let mut check_and_replace =
                 |replace: bool, no_scope: &AHashSet<String>, scope: &AHashSet<String>| {
                     if replace && no_scope.contains(source) {
-                        d.src =
-                            scope.iter().find(|s| s.contains("scope")).unwrap().to_string().into()
+                        d.src = Box::new(
+                            scope.iter().find(|s| s.contains("scope")).unwrap().to_string().into(),
+                        )
                     }
                 };
 

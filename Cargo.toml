@@ -12,16 +12,16 @@ crate-type = ["cdylib", "rlib"]
 radix_fmt = "1.0.0"
 ahash = { version = "0.8.0", features = ["serde"] }
 phf = { version = "0.11.1", features = ["macros"] }
-serde = { version = "1.0.144", features = ["derive"] }
+serde = { version = "1.0.145", features = ["derive"] }
 serde_json = "1.0.85"
-swc_common = { version = "0.27.12", features = ["concurrent"] }
-swc_core = { version = "0.10.0", features = [
+swc_common = { version = "0.29.4", features = ["concurrent"] }
+swc_core = { version = "0.28.18", features = [
     "plugin_transform",
-    "utils",
-    "visit",
-    "ast",
+    "ecma_utils",
+    "ecma_visit",
+    "ecma_ast",
     "common",
-    "quote"
+    "ecma_quote"
 ] }
 
 [profile.release]
@@ -31,5 +31,5 @@ opt-level = 3
 panic = "abort"
 
 [dev-dependencies]
-swc_ecmascript = { version = "0.192.0", features = ["parser", "transforms"] }
-testing = "0.29.4"
+swc_ecmascript = { version = "0.203.29", features = ["parser", "transforms"] }
+testing = "0.31.4"
