@@ -6,9 +6,8 @@ mod sid;
 
 use swc_common::plugin::metadata::TransformPluginMetadataContextKind;
 use swc_core::{
-    ast::Program,
+    ecma::{ast::Program, visit::VisitMutWith},
     plugin::{plugin_transform, proxies::TransformPluginProgramMetadata},
-    visit::VisitMutWith,
 };
 
 pub use crate::{

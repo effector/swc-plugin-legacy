@@ -13,15 +13,15 @@ macro_rules! obj_lit_internal {
     // Insert the current entry followed by trailing comma.
     (@object $object:ident [$($key:tt)+] ($value:expr) , $($rest:tt)*) => {
         $object.props.push(
-            ::swc_core::ast::PropOrSpread::Prop(
-                Box::new(::swc_core::ast::Prop::KeyValue(
-                    ::swc_core::ast::KeyValueProp {
-                        key: ::swc_core::ast::PropName::Ident(
-                            ::swc_core::utils::quote_ident!(($($key)+))
+            ::swc_core::ecma::ast::PropOrSpread::Prop(
+                Box::new(::swc_core::ecma::ast::Prop::KeyValue(
+                    ::swc_core::ecma::ast::KeyValueProp {
+                        key: ::swc_core::ecma::ast::PropName::Ident(
+                            ::swc_core::ecma::utils::quote_ident!(($($key)+))
                         ),
                         value: Box::new(
-                            ::swc_core::ast::Expr::Lit(
-                                ::swc_core::ast::Lit::Str(
+                            ::swc_core::ecma::ast::Expr::Lit(
+                                ::swc_core::ecma::ast::Lit::Str(
                                     $value
                                 )
                             )
@@ -37,15 +37,15 @@ macro_rules! obj_lit_internal {
     // Insert the last entry without trailing comma.
     (@object $object:ident [$($key:tt)+] ($value:expr)) => {
         $object.props.push(
-            ::swc_core::ast::PropOrSpread::Prop(
-                Box::new(::swc_core::ast::Prop::KeyValue(
-                    ::swc_core::ast::KeyValueProp {
-                        key: ::swc_core::ast::PropName::Ident(
-                            ::swc_core::utils::quote_ident!(($($key)+))
+            ::swc_core::ecma::ast::PropOrSpread::Prop(
+                Box::new(::swc_core::ecma::ast::Prop::KeyValue(
+                    ::swc_core::ecma::ast::KeyValueProp {
+                        key: ::swc_core::ecma::ast::PropName::Ident(
+                            ::swc_core::ecma::utils::quote_ident!(($($key)+))
                         ),
                         value: Box::new(
-                            ::swc_core::ast::Expr::Lit(
-                                ::swc_core::ast::Lit::Str(
+                            ::swc_core::ecma::ast::Expr::Lit(
+                                ::swc_core::ecma::ast::Lit::Str(
                                     $value
                                 )
                             )
@@ -96,7 +96,7 @@ macro_rules! obj_lit_internal {
 
     ({ $($tt:tt)+ }) => {
         {
-            let mut object = (::swc_core::ast::ObjectLit {
+            let mut object = (::swc_core::ecma::ast::ObjectLit {
                 span: ::swc_common::DUMMY_SP,
                 props: vec![]
             });
@@ -108,6 +108,6 @@ macro_rules! obj_lit_internal {
     };
 
     ($other:expr) => {
-        ::swc_core::ast::Str::from($other)
+        ::swc_core::ecma::ast::Str::from($other)
     };
 }
