@@ -1,4 +1,4 @@
-use std::{fmt, path::PathBuf};
+euse std::{fmt, path::PathBuf};
 
 use ahash::AHashSet;
 use serde::{
@@ -195,6 +195,7 @@ fn default_import_names() -> AHashSet<String> {
         "effector-root/compat".into(),
         "effector-logger".into(),
         "trail/runtime".into(),
+        "patronum".into(),
         "@effector/effector".into(),
         "@farfetched/core".into(),
         "@effector/reflect".into(),
