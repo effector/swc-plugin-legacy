@@ -4,8 +4,9 @@ use effector_swc_plugin::{Config, Effector, InternalConfig, PublicConfig};
 use swc_common::{FilePathMapping, Mark, SourceMap};
 use swc_core::{
     common::chain,
-    testing_transform::test_fixture,
-    visit::{as_folder, Fold},
+    ecma::transforms::testing::test_fixture,
+    ecma::visit::as_folder,
+    ecma::visit::Fold
 };
 use swc_ecmascript::{
     parser::{EsConfig, Syntax},
