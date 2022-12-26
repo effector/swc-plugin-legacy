@@ -118,8 +118,8 @@ fn make_trace(
     Expr::Object(ObjectLit { span: DUMMY_SP, props: vec![file_prop, line_prop, column_prop] })
 }
 
-fn set_restore_name_after<'a>(
-    state: &State<'a>,
+fn set_restore_name_after(
+    state: &State<'_>,
     name_node_id: &Option<&str>,
     small_config: &SmallConfig,
 ) {
@@ -175,8 +175,8 @@ fn set_restore_name_after<'a>(
     }
 }
 
-fn set_config_for_conf_method<'a>(
-    state: &State<'a>,
+fn set_config_for_conf_method(
+    state: &State<'_>,
     name_node_id: &Option<&str>,
     small_config: &SmallConfig,
     single_arg: bool,
@@ -237,8 +237,8 @@ fn set_config_for_conf_method<'a>(
     args.insert(0, arg);
 }
 
-fn set_event_name_after<'a>(
-    state: &State<'a>,
+fn set_event_name_after(
+    state: &State<'_>,
     name_node_id: &Option<&str>,
     small_config: &SmallConfig,
 ) {
@@ -305,8 +305,8 @@ fn set_event_name_after<'a>(
     }
 }
 
-fn set_store_name_after<'a>(
-    state: &State<'a>,
+fn set_store_name_after(
+    state: &State<'_>,
     name_node_id: &Option<&str>,
     small_config: &SmallConfig,
     _fill_first_arg: bool,
@@ -400,7 +400,7 @@ impl<'a> State<'a> {
                 Pat::Ident(ident) => ident.sym.as_ref() == id,
                 _ => false,
             }),
-            Decl::Fn(f) => &f.ident.sym.as_ref() == &id,
+            Decl::Fn(f) => f.ident.sym.as_ref() == id,
             _ => false,
         })
     }
