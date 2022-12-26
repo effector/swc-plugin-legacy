@@ -4,8 +4,10 @@ use effector_swc_plugin::{Config, Effector, InternalConfig, PublicConfig};
 use swc_common::{FilePathMapping, Mark, SourceMap};
 use swc_core::{
     common::chain,
-    testing_transform::test_fixture,
-    visit::{as_folder, Fold},
+    ecma::{
+        transforms::testing::{test_fixture, FixtureTestConfig},
+        visit::{as_folder, Fold},
+    },
 };
 use swc_ecmascript::{
     parser::{EsConfig, Syntax},
@@ -44,6 +46,7 @@ fn fixture(input: PathBuf) {
         },
         &input,
         &output,
+        FixtureTestConfig::default(),
     )
 }
 

@@ -11,8 +11,6 @@ export default defineConfig({
                         [
                             "@effector/swc-plugin",
                             {
-                                addLoc: true,
-                                factories: ["./demo/src/factory"]
                             }
                         ]
                     ]

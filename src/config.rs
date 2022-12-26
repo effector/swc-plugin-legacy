@@ -200,7 +200,7 @@ fn default_import_names() -> AHashSet<String> {
         "@farfetched/core".into(),
         "@effector/reflect".into(),
         "@effector/reflect/ssr".into(),
-        "atomic-router".into()
+        "atomic-router".into(),
     ])
 }
 
