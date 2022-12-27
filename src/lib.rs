@@ -4,8 +4,8 @@ mod macros;
 mod path;
 mod sid;
 
-use swc_common::plugin::metadata::TransformPluginMetadataContextKind;
 use swc_core::{
+    common::plugin::metadata::TransformPluginMetadataContextKind,
     ecma::{ast::Program, visit::VisitMutWith},
     plugin::{plugin_transform, proxies::TransformPluginProgramMetadata},
 };

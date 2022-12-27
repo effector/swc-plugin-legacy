@@ -1,9 +1,9 @@
 {
   "name": "@effector/swc-plugin",
   "version": "0.0.8",
-  "main": "target/wasm32-wasi/release/effector_swc_plugin.wasm",
+  "main": "target/wasm32-wasi/debug/effector_swc_plugin.wasm",
   "files": [
-    "target/wasm32-wasi/release/effector_swc_plugin.wasm"
+    "target/wasm32-wasi/debug/effector_swc_plugin.wasm"
   ],
   "publishConfig": {
     "access": "public"

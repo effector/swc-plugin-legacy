@@ -8,11 +8,13 @@ use std::{
 };
 
 use ahash::{AHashMap, AHashSet};
-use swc_common::{sync::Lrc, Loc, SourceMapper, DUMMY_SP};
-use swc_core::ecma::{
-    ast::*,
-    utils::{private_ident, quote_ident},
-    visit::{noop_visit_mut_type, VisitMut, VisitMutWith},
+use swc_core::{
+    common::{sync::Lrc, Loc, SourceMapper, DUMMY_SP},
+    ecma::{
+        ast::*,
+        utils::{private_ident, quote_ident},
+        visit::{noop_visit_mut_type, VisitMut, VisitMutWith},
+    },
 };
 
 use crate::{
