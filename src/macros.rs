@@ -97,7 +97,7 @@ macro_rules! obj_lit_internal {
     ({ $($tt:tt)+ }) => {
         {
             let mut object = (::swc_core::ecma::ast::ObjectLit {
-                span: ::swc_common::DUMMY_SP,
+                span: ::swc_core::common::DUMMY_SP,
                 props: vec![]
             });
 

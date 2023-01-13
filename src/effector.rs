@@ -8,7 +8,7 @@ use std::{
 };
 
 use ahash::{AHashMap, AHashSet};
-use swc_common::{sync::Lrc, Loc, SourceMapper, DUMMY_SP};
+use swc_core::common::{sync::Lrc, Loc, SourceMapper, DUMMY_SP};
 use swc_core::ecma::{
     ast::*,
     utils::{private_ident, quote_ident},
