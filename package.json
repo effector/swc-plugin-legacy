@@ -1,9 +1,9 @@
 {
   "name": "@effector/swc-plugin",
   "version": "0.0.8",
-  "main": "target/wasm32-wasi/release/effector_swc_plugin.wasm",
+  "main": "target/wasm32-wasi/debug/effector_swc_plugin.wasm",
   "files": [
-    "target/wasm32-wasi/release/effector_swc_plugin.wasm"
+    "target/wasm32-wasi/debug/effector_swc_plugin.wasm"
   ],
   "publishConfig": {
     "access": "public"
@@ -15,12 +15,12 @@
   "author": "Kirill Mironov <vetrokm@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@babel/core": "~7.20.7",
+    "@babel/core": "~7.20.12",
     "@effector/swc-plugin": "link:.",
-    "@swc/cli": "~0.1.59",
-    "@swc/core": "~1.3.24",
-    "effector": "~22.4.1",
-    "unplugin-swc": "~1.3.2",
-    "vite": "~4.0.3"
+    "@swc/cli": "^0.1.59",
+    "@swc/core": "^1.3.26",
+    "effector": "~22.5.0",
+    "unplugin-swc": "^1.3.2",
+    "vite": "^4.0.4"
   }
 }

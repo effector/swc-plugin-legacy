@@ -4,7 +4,7 @@ mod macros;
 mod path;
 mod sid;
 
-use swc_common::plugin::metadata::TransformPluginMetadataContextKind;
+use swc_core::plugin::metadata::TransformPluginMetadataContextKind;
 use swc_core::{
     ecma::{ast::Program, visit::VisitMutWith},
     plugin::{plugin_transform, proxies::TransformPluginProgramMetadata},
@@ -30,6 +30,7 @@ pub fn effector(mut program: Program, data: TransformPluginProgramMetadata) -> P
     let filename = data.get_context(&TransformPluginMetadataContextKind::Filename);
 
     let config = Config::new(public_config, InternalConfig::new(no_defaults));
+    return program;
 
     let mut plugin = Effector::new(config, root.as_deref(), filename.as_deref(), data.source_map);
 
