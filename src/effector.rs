@@ -938,10 +938,13 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                     if let MemberProp::Ident(ident) = &member.prop {
                         let local = ident.sym.to_string();
 
+                        let loc = self.cm.lookup_char_pos(ident.span.lo);
+                        self.state.loc = Some(loc);
+                        
                         apply_method_parsers(
                             &self.state.domain_method_parsers,
                             &self.state,
-                            &local,
+                            "",
                             &local,
                             &self.candidate_name.as_ref().map(|i| i.as_ref()),
                         );
