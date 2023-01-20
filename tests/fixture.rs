@@ -1,9 +1,8 @@
 use std::{fs::read_to_string, path::PathBuf};
 
 use effector_swc_plugin::{Config, Effector, InternalConfig, PublicConfig};
-use swc_common::{FilePathMapping, Mark, SourceMap};
 use swc_core::{
-    common::chain,
+    common::{chain, FilePathMapping, Mark, SourceMap},
     ecma::{
         transforms::testing::{test_fixture, FixtureTestConfig},
         visit::{as_folder, Fold},
