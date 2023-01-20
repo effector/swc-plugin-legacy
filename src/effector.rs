@@ -911,7 +911,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                 Expr::Member(member) => {
                     if let MemberProp::Ident(ident) = &member.prop {
                         let local = ident.sym.to_string();
-                        self.state.args = RefCell::new(e.args.clone().drain(..).collect());
+                        self.state.args = RefCell::new(e.args.clone());
 
                         apply_method_parsers(
                             &self.state.domain_method_parsers,
