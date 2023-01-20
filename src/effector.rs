@@ -8,11 +8,13 @@ use std::{
 };
 
 use ahash::{AHashMap, AHashSet};
-use swc_core::common::{sync::Lrc, Loc, SourceMapper, DUMMY_SP};
-use swc_core::ecma::{
-    ast::*,
-    utils::{private_ident, quote_ident},
-    visit::{noop_visit_mut_type, VisitMut, VisitMutWith},
+use swc_core::{
+    common::{sync::Lrc, Loc, SourceMapper, DUMMY_SP},
+    ecma::{
+        ast::*,
+        utils::{private_ident, quote_ident},
+        visit::{noop_visit_mut_type, VisitMut, VisitMutWith},
+    },
 };
 
 use crate::{
@@ -118,6 +120,17 @@ fn make_trace(
     Expr::Object(ObjectLit { span: DUMMY_SP, props: vec![file_prop, line_prop, column_prop] })
 }
 
+fn state_gen_stable_id(state: &State<'_>, name_node_id: &Option<&str>, debug_sids: bool) -> String {
+    generate_stable_id(
+        state.root.unwrap_or(""),
+        state.filename.unwrap_or(""),
+        name_node_id,
+        state.loc.as_ref().unwrap().line as u32,
+        state.loc.as_ref().unwrap().col_display as u32,
+        debug_sids,
+    )
+}
+
 fn set_restore_name_after(
     state: &State<'_>,
     name_node_id: &Option<&str>,
@@ -125,14 +138,7 @@ fn set_restore_name_after(
 ) {
     let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
 
-    let stable_id = generate_stable_id(
-        state.root.unwrap_or(""),
-        state.filename.unwrap_or(""),
-        name_node_id,
-        state.loc.as_ref().unwrap().line as u32,
-        state.loc.as_ref().unwrap().col_display as u32,
-        debug_sids,
-    );
+    let stable_id = state_gen_stable_id(state, name_node_id, debug_sids);
 
     let mut args = state.args.borrow_mut();
 
@@ -184,14 +190,7 @@ fn set_config_for_conf_method(
 ) {
     let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
 
-    let stable_id = generate_stable_id(
-        state.root.unwrap_or(""),
-        state.filename.unwrap_or(""),
-        name_node_id,
-        state.loc.as_ref().unwrap().line as u32,
-        state.loc.as_ref().unwrap().col_display as u32,
-        debug_sids,
-    );
+    let stable_id = state_gen_stable_id(state, name_node_id, debug_sids);
 
     let mut args = state.args.borrow_mut();
 
@@ -244,14 +243,7 @@ fn set_event_name_after(
 ) {
     let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
 
-    let stable_id = generate_stable_id(
-        state.root.unwrap_or(""),
-        state.filename.unwrap_or(""),
-        name_node_id,
-        state.loc.as_ref().unwrap().line as u32,
-        state.loc.as_ref().unwrap().col_display as u32,
-        debug_sids,
-    );
+    let stable_id = state_gen_stable_id(state, name_node_id, debug_sids);
 
     let mut args = state.args.borrow_mut();
 
@@ -313,14 +305,7 @@ fn set_store_name_after(
 ) {
     let &SmallConfig { add_loc, add_names, debug_sids } = small_config;
 
-    let stable_id = generate_stable_id(
-        state.root.unwrap_or(""),
-        state.filename.unwrap_or(""),
-        name_node_id,
-        state.loc.as_ref().unwrap().line as u32,
-        state.loc.as_ref().unwrap().col_display as u32,
-        debug_sids,
-    );
+    let stable_id = state_gen_stable_id(state, name_node_id, debug_sids);
 
     let mut args = state.args.borrow_mut();
     let old_config = args.get(1);
@@ -585,9 +570,7 @@ impl<'a> State<'a> {
 
 #[derive(Debug)]
 struct FactoryInfo {
-    local_name: Ident,
     imported_name: String,
-    source: PathBuf,
 }
 
 pub struct Effector<'a, C: SourceMapper> {
@@ -603,7 +586,6 @@ pub struct Effector<'a, C: SourceMapper> {
     imports_to_add: AHashSet<ImportDecl>,
     with_factory_name: Option<Ident>,
     cm: Lrc<C>,
-    loc: Option<Loc>,
 }
 
 impl<'a, C: SourceMapper> Effector<'a, C> {
@@ -626,7 +608,6 @@ impl<'a, C: SourceMapper> Effector<'a, C> {
             is_factory: AHashSet::new(),
             factory_import_added: false,
             cm: Lrc::new(cm),
-            loc: None,
         }
     }
 
@@ -879,14 +860,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                         _ => continue,
                     };
 
-                    self.factory_map.insert(
-                        local_name.to_id(),
-                        FactoryInfo {
-                            local_name,
-                            imported_name,
-                            source: normalized_source.clone(),
-                        },
-                    );
+                    self.factory_map.insert(local_name.to_id(), FactoryInfo { imported_name });
                 }
             }
         }
@@ -959,7 +933,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                             let loc = self.cm.lookup_char_pos(ident.span.lo);
 
                             self.state.loc = Some(loc);
-                            self.state.args = RefCell::new(e.args.clone().drain(..).collect());
+                            self.state.args = RefCell::new(e.args.clone());
                             apply_method_parsers(
                                 &self.state.method_parsers,
                                 &self.state,
@@ -983,7 +957,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                         let loc = self.cm.lookup_char_pos(ident.span.lo);
 
                         self.state.loc = Some(loc);
-                        self.state.args = RefCell::new(e.args.clone().drain(..).collect());
+                        self.state.args = RefCell::new(e.args.clone());
                         apply_method_parsers(
                             &self.state.method_parsers,
                             &self.state,
@@ -1007,14 +981,14 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                         let loc = self.cm.lookup_char_pos(ident.span.lo);
 
                         self.state.loc = Some(loc.clone());
-                        self.state.args = RefCell::new(e.args.clone().drain(..).collect());
+                        self.state.args = RefCell::new(e.args.clone());
                         if !self.factory_import_added {
                             self.factory_import_added = true;
                             self.with_factory_name =
                                 Some(self.add_import(quote_ident!("withFactory")));
                         }
 
-                        let FactoryInfo { source: _, imported_name, local_name: _ } = self
+                        let FactoryInfo { imported_name } = self
                             .factory_map
                             .remove(&ident.to_id())
                             .expect("Already checked for existence.");

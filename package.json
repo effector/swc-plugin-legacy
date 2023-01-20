@@ -18,7 +18,7 @@
     "@babel/core": "~7.20.12",
     "@effector/swc-plugin": "link:.",
     "@swc/cli": "^0.1.59",
-    "@swc/core": "^1.3.26",
+    "@swc/core": "^1.3.27",
     "effector": "~22.5.0",
     "unplugin-swc": "^1.3.2",
     "vite": "^4.0.4"
