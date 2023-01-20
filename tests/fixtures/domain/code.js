@@ -1,5 +1,7 @@
 import {createDomain} from "effector";
 
-const domain1 = createDomain();
+const domain = createDomain();
+const someDomain = createDomain();
 
-const $store = domain1.store(0);
+const domainInner = someDomain.domain('inner domain');
+const $store = domainInner.store(0);

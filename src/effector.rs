@@ -913,10 +913,13 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                         let local = ident.sym.to_string();
                         self.state.args = RefCell::new(e.args.clone());
 
+                        let loc = self.cm.lookup_char_pos(ident.span.lo);
+                        self.state.loc = Some(loc);
+
                         apply_method_parsers(
                             &self.state.domain_method_parsers,
                             &self.state,
-                            &local,
+                            "",
                             &local,
                             &self.candidate_name.as_ref().map(|i| i.as_ref()),
                         );
