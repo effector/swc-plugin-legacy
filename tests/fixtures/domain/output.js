@@ -9,7 +9,7 @@ const domain1 = createDomain({
     },
     name: "domain1"
 });
-const $store = domain1.store({
+const $store = domain1.store(0, {
     sid: "nclwk0e61c3p",
     loc: {
         file: _effectorFileName$0,
