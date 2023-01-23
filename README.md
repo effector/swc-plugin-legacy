@@ -66,10 +66,10 @@ Accepts an array of module names which exports treat as custom factories therefo
   "jsc": {
     "experimental": {
       "plugins": [
-        "@effector/swc-plugin",
+        ["@effector/swc-plugin",
         {
           "factories": ["src/createEffectStatus", "~/createCommonPending"]
-        }
+        }]
       ]
     }
   }
@@ -125,7 +125,7 @@ Add location to methods' calls. Used by devtools, for example effector-logger.
 Add path of a file and a variable name whether a unit was defined to a sid. Useful for debugging SSR.
 
 ## Bundlers
-Vite + Solid (SSR)
+### Vite + Solid (SSR)
 
 To use vite + solidjs you have to do the following:
 
@@ -157,3 +157,28 @@ To use vite + solidjs you have to do the following:
      ```
      
 Or you can store `jsc` field in `.swcrc` instead.
+
+### Next.js
+
+To use Next.js + Effector you have to do the following:
+
+1. Install dependencies
+   - ```bash
+     pnpm i effector effector-react
+     pnpm i -D @effector/swc-plugin
+     ```
+2. `next.config.js` should look like this:
+   - ```javascript
+     // next.config.js
+     /** @type {import('next').NextConfig} */
+      const nextConfig = {
+        ...
+        experimental: {
+          swcPlugins: [
+            ["@effector/swc-plugin", {}],
+          ],
+        },
+      };
+
+      module.exports = nextConfig;
+     ```
