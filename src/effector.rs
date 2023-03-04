@@ -568,7 +568,7 @@ impl<'a> State<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct FactoryInfo {
     imported_name: String,
 }
@@ -580,7 +580,6 @@ pub struct Effector<'a, C: SourceMapper> {
     candidate_name: Option<Ident>,
     factory_paths: AHashSet<String>,
     factory_map: AHashMap<Id, FactoryInfo>,
-    is_factory: AHashSet<Id>,
     need_factory_import: bool,
     factory_import_added: bool,
     imports_to_add: AHashSet<ImportDecl>,
@@ -605,7 +604,6 @@ impl<'a, C: SourceMapper> Effector<'a, C> {
             need_factory_import: false,
             imports_to_add: AHashSet::new(),
             with_factory_name: None,
-            is_factory: AHashSet::new(),
             factory_import_added: false,
             cm: Lrc::new(cm),
         }
@@ -904,8 +902,6 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
     }
 
     fn visit_mut_call_expr(&mut self, e: &mut CallExpr) {
-        let factories_used = !self.config.public.factories.is_empty();
-
         if let Callee::Expr(expr) = &mut e.callee {
             match &mut **expr {
                 Expr::Member(member) => {
@@ -978,9 +974,7 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                         );
                     }
 
-                    if factories_used
-                        && !self.is_factory.contains(&ident.to_id())
-                        && self.factory_map.contains_key(&ident.to_id())
+                    if let Some(FactoryInfo { imported_name }) = self.factory_map.get(&ident.to_id()).cloned()
                     {
                         let loc = self.cm.lookup_char_pos(ident.span.lo);
 
@@ -992,12 +986,6 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                                 Some(self.add_import(quote_ident!("withFactory")));
                         }
 
-                        let FactoryInfo { imported_name } = self
-                            .factory_map
-                            .remove(&ident.to_id())
-                            .expect("Already checked for existence.");
-                        self.is_factory.insert(ident.to_id());
-
                         let sid = generate_stable_id(
                             self.state.root.unwrap_or(""),
                             self.state.filename.unwrap_or(""),
@@ -1007,11 +995,14 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                             self.config.public.debug_sids,
                         );
 
+                        let mut e_cloned = e.clone();
+                        e_cloned.visit_mut_children_with(self);
+
                         let expr = swc_core::quote!(
                             "$factory({sid: $sid,fn:()=>$fun})" as Expr,
                             factory = self.with_factory_name.clone().unwrap(),
                             sid: Expr = sid.into(),
-                            fun: Expr = Expr::Call(e.clone()),
+                            fun: Expr = Expr::Call(e_cloned),
                         );
 
                         if let Expr::Call(mut call) = expr {
@@ -1047,7 +1038,6 @@ impl<'a, C: SourceMapper> VisitMut for Effector<'a, C> {
                                 }
                             }
                             *e = call;
-                            e.visit_mut_children_with(self);
                             return;
                         }
                     }
