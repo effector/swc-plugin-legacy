@@ -1,0 +1,14 @@
+name: Publish CI
+
+on: [push]
+
+jobs:
+  publish-to-crates:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Install Taplo
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: tamasfe/taplo
+          tag: 0.8.0
