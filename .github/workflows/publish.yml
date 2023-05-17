@@ -19,7 +19,7 @@ jobs:
       - name: Decompress Taplo
         run: |
           TAPLO=$(which taplo);
-          gzip -d $TAPLO
+          gzip -d $TAPLO 2> echo
       
       - name: Checkout
         uses: actions/checkout@v3
