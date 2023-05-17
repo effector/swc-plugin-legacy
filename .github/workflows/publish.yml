@@ -13,13 +13,13 @@ jobs:
           repo: tamasfe/taplo
           tag: "0.8.0"
           extension: "\\.gz"
-          rename-to: taplo
+          rename-to: taplo.gz
           arch: x86_64
-          chmod: 0755
       
       - name: Decompress Taplo
         run: |
-          echo $(which taplo)
+          TAPLO=$(which taplo);
+          gzip -d $TAPLO
       
       - name: Checkout
         uses: actions/checkout@v3
