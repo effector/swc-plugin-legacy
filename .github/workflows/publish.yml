@@ -8,6 +8,7 @@ jobs:
     
     steps:
       - name: Install Taplo
+        if: false
         uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
           repo: tamasfe/taplo
@@ -17,11 +18,22 @@ jobs:
           arch: x86_64
       
       - name: Decompress Taplo
+        if: false
         run: |
           TAPLO=$(which taplo);
           gzip -d $TAPLO 2> echo
       
       - name: Checkout
         uses: actions/checkout@v3
+        
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        
+      - name: Install Taplo
+        uses: actions-rs/cargo@v1
+        with:
+          command: install taplo-cli --locked
       
       - run: "echo $(taplo get -f Cargo.toml 'package.version')"
+      
+        
