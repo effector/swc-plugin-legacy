@@ -3,38 +3,47 @@ name: Publish CI
 on: [push]
 
 jobs:
-  publish-to-crates:
+  setup:
     runs-on: ubuntu-22.04
     
     steps:
-      - name: Install Taplo
-        if: false
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
-        with:
-          repo: tamasfe/taplo
-          tag: "0.8.0"
-          extension: "\\.gz"
-          rename-to: taplo.gz
-          arch: x86_64
-      
-      - name: Decompress Taplo
-        if: false
-        run: |
-          TAPLO=$(which taplo);
-          gzip -d $TAPLO 2> echo
-      
       - name: Checkout
         uses: actions/checkout@v3
         
       - name: Install rust
         uses: actions-rs/toolchain@v1
-        
-      - name: Install Taplo
+  
+  toml:
+    runs-on: ubuntu-22.04
+    needs: [setup]
+    steps:
+      - name: Install TOML Cli
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: taplo-cli --locked
+          args: toml-cli --locked
+      - run: "echo $(toml get Cargo.toml 'package.version')"
+  
+  build:
+    runs-on: ubuntu-22.04
+    needs: [setup]
+    steps:
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
       
-      - run: "echo $(taplo get -f Cargo.toml 'package.version')"
+      - name: Tet
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+  
+  set_version:
+    runs-on: ubuntu-22.04
+    needs: [toml, build]
+    steps:
+      - name: Set version
+        run: toml set Cargo.toml "package.version" "0.1.0"
       
-        
+      - name: Get version
+        run: "echo $(toml get Cargo.toml 'package.version')"
