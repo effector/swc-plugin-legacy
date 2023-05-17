@@ -13,3 +13,9 @@ jobs:
           repo: tamasfe/taplo
           tag: "0.8.0"
           extension: "\\.gz"
+          rename-to: taplo
+      
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - run: "echo $(taplo get -f Cargo.toml 'package.version')"
