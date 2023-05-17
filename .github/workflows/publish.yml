@@ -14,6 +14,7 @@ jobs:
           tag: "0.8.0"
           extension: "\\.gz"
           rename-to: taplo
+          chmod: 0755
       
       - name: Checkout
         uses: actions/checkout@v3
