@@ -12,4 +12,4 @@ jobs:
         with:
           repo: tamasfe/taplo
           tag: "0.8.0"
-          extensions: "\\.gz"
+          extension: "\\.gz"
