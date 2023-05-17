@@ -12,6 +12,8 @@ jobs:
     
       - name: Install rust
         uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-wasi
 
       - name: Install TOML Cli
         uses: actions-rs/cargo@v1
