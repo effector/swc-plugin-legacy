@@ -19,6 +19,7 @@ jobs:
       
       - name: Decompress Taplo
         run: |
+          echo $(which taplo)
           gzip -d $(which taplo)
           chmod +x $(which taplo)
       
