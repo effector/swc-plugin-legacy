@@ -17,6 +17,11 @@ jobs:
           arch: x86_64
           chmod: 0755
       
+      - name: Decompress Taplo
+        run: |
+          gzip -d $(which taplo)
+          chmod +x $(which taplo)
+      
       - name: Checkout
         uses: actions/checkout@v3
       
