@@ -32,7 +32,8 @@ jobs:
       - name: Install Taplo
         uses: actions-rs/cargo@v1
         with:
-          command: install taplo-cli --locked
+          command: install
+          args: taplo-cli --locked
       
       - run: "echo $(taplo get -f Cargo.toml 'package.version')"
       
