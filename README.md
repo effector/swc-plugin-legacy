@@ -2,6 +2,13 @@
 
 Plugin for SWC which can be used to automatically change imports (scope/no scope), insert sids (for scope) or for debugging.
 
+## ⚠️ Please notice, that SWC Plugin API itself is not stable yet ⚠️
+
+This means that `@effector/swc-plugin` **can and probably will be affected by breaking changes in the SWC Plugins API** in the future.
+At the moment this plugins is seems to be stable enough. But if you need guaranteed stability - prefer `effector/babel-plugin` instead.
+
+When SWC Plugin API will be stabilized, we will be able to declare `@effector/swc-plugin` as stable too.
+
 # Installation
 
 You can use any package manager that you want.
