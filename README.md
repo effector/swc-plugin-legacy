@@ -39,7 +39,7 @@ In the simplest case, it can be used without any configuration.
   "$schema": "https://json.schemastore.org/swcrc",
   "jsc": {
     "experimental": {
-      "plugins": ["@effector/swc-plugin"]
+      "plugins": [["@effector/swc-plugin", {}]]
     }
   }
 }
@@ -155,7 +155,7 @@ To use vite + solidjs you have to do the following:
             swc.vite({
                 jsc: {
                     experimental: {
-                        plugins: ["@effector/swc-plugin"]
+                        plugins: [["@effector/swc-plugin", {}]]
                     }
                 }
             }),
