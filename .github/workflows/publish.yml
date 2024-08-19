@@ -1,0 +1,42 @@
+name: Publish CI
+
+on: [push]
+
+jobs:
+  setup:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+    
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-wasi
+          
+      - name: Cache TOML Cli
+        id: cache-toml
+        uses: actions/cache@v3
+
+      - name: Install TOML Cli
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: toml-cli --locked
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+      
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+  
+      - name: Set version
+        run: toml set Cargo.toml "package.version" "0.1.0"
+      
+      - name: Get version
+        run: "echo $(toml get Cargo.toml 'package.version')"
